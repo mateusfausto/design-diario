@@ -300,4 +300,22 @@ body.theme-light .dropdown-menu .form-check-input {
     right: 16px;
     bottom: 96px;
   }
+
+  .filters-bar {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+  }
+  .mobile-filters-toggle {
+    border: none;
+    box-shadow: none;
+  }
+  .mobile-filters-toggle:hover,
+  .mobile-filters-toggle:focus,
+  .mobile-filters-toggle:active,
+  .mobile-filters-toggle.show,
+  .mobile-filters-toggle.active {
+    border: none;
+    box-shadow: none;
+  }
+
 }

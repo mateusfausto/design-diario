@@ -58,7 +58,7 @@ export const defaultFeeds = [
   {
     id: '8',
     name: 'Airbnb Design',
-    url: 'https://airbnb.design/feed/',
+    url: 'https://medium.com/feed/airbnb-design',
     category: 'Company Blogs',
     description: 'Behind the scenes of Airbnb design',
     isActive: true,
@@ -74,7 +74,7 @@ export const defaultFeeds = [
   {
     id: '10',
     name: 'Figma Blog',
-    url: 'https://www.figma.com/blog/feed/',
+    url: 'https://figma.com/blog/feed/atom.xml',
     category: 'Company Blogs',
     description: 'Updates and stories from Figma',
     isActive: true,
@@ -90,7 +90,7 @@ export const defaultFeeds = [
   {
     id: '12',
     name: 'IDEO Blog',
-    url: 'https://www.ideo.com/blog/feed',
+    url: 'https://www.ideo.com/thinking',
     category: 'Design Strategy',
     description: 'Design thinking and innovation',
     isActive: true,
@@ -140,7 +140,7 @@ export const defaultFeeds = [
   {
     id: '18',
     name: 'UX Para Minas Pretas',
-    url: 'https://medium.com/feed/uxparaminaspretas',
+    url: 'https://medium.com/feed/@uxparaminaspretas',
     category: 'UX Design Brasil 🇧🇷',
     description: 'Coletivo de designers negras',
     isActive: true,
@@ -156,7 +156,7 @@ export const defaultFeeds = [
   {
     id: '20',
     name: 'Queimando Neurônios',
-    url: 'https://queimandneuronios.com/feed/',
+    url: 'https://queimandoneuronios.com/feed/',
     category: 'UI Design Brasil 🇧🇷',
     description: 'Blog sobre design, front-end e criatividade',
     isActive: true,
@@ -172,7 +172,7 @@ export const defaultFeeds = [
   {
     id: '22',
     name: 'CollabUX',
-    url: 'https://medium.com/feed/collabux',
+    url: 'https://medium.com/collabux',
     category: 'UX Design Brasil 🇧🇷',
     description: 'Comunidade brasileira de UX',
     isActive: true,
@@ -180,7 +180,7 @@ export const defaultFeeds = [
   {
     id: '23',
     name: 'UX Unicórnio',
-    url: 'https://medium.com/feed/ux-unicornio',
+    url: 'https://www.uxunicornio.vip/',
     category: 'UX Design Brasil 🇧🇷',
     description: 'Conteúdo sobre UX e carreira',
     isActive: true,
@@ -196,7 +196,7 @@ export const defaultFeeds = [
   {
     id: '25',
     name: 'IxDA São Paulo',
-    url: 'https://medium.com/feed/ixda-sao-paulo',
+    url: 'https://ixda.org',
     category: 'Interaction Design Brasil 🇧🇷',
     description: 'Interaction Design Association capítulo SP',
     isActive: true,
@@ -204,7 +204,7 @@ export const defaultFeeds = [
   {
     id: '26',
     name: 'Design Titans',
-    url: 'https://designtitans.com.br/feed/',
+    url: 'https://designtitans.com.br',
     category: 'Design Brasil 🇧🇷',
     description: 'Podcast e blog sobre design',
     isActive: true,

@@ -308,6 +308,7 @@ body.theme-light .dropdown-menu .form-check-input {
   .mobile-filters-toggle {
     border: none;
     box-shadow: none;
+    color: #f9f9f9;
   }
   .mobile-filters-toggle:hover,
   .mobile-filters-toggle:focus,

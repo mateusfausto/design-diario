@@ -21,6 +21,16 @@ const toBase64Uint8 = (base64String) => {
   return Uint8Array.from([...rawData].map((char) => char.charCodeAt(0)));
 };
 
+const apiBaseUrl = import.meta.env.VITE_API_URL || '/api';
+const apiUrl = (path) => {
+  const normalizedBase = apiBaseUrl.endsWith('/') ? apiBaseUrl.slice(0, -1) : apiBaseUrl;
+  const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+  if (normalizedBase.startsWith('http://') || normalizedBase.startsWith('https://')) {
+    return new URL(`${normalizedBase}${normalizedPath}`).toString();
+  }
+  return `${normalizedBase}${normalizedPath}`;
+};
+
 function App() {
   const selectedView = useStore((state) => state.selectedView);
   const theme = useStore((state) => state.theme);
@@ -114,7 +124,7 @@ function App() {
       const registration = await navigator.serviceWorker.ready;
       const existingSubscription = await registration.pushManager.getSubscription();
       if (existingSubscription) {
-        await fetch('/api/notifications/subscribe', {
+        await fetch(apiUrl('/notifications/subscribe'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(existingSubscription),
@@ -122,7 +132,7 @@ function App() {
         setHasPushSubscription(true);
         return;
       }
-      const response = await fetch('/api/notifications/public-key');
+      const response = await fetch(apiUrl('/notifications/public-key'));
       if (!response.ok) {
         return;
       }
@@ -134,7 +144,7 @@ function App() {
         userVisibleOnly: true,
         applicationServerKey: toBase64Uint8(publicKey),
       });
-      const subscribeResponse = await fetch('/api/notifications/subscribe', {
+      const subscribeResponse = await fetch(apiUrl('/notifications/subscribe'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(subscription),
@@ -176,7 +186,7 @@ function App() {
       if (permission !== 'granted') {
         return;
       }
-      const response = await fetch('/api/notifications/public-key');
+      const response = await fetch(apiUrl('/notifications/public-key'));
       if (!response.ok) {
         throw new Error('Notificações indisponíveis no servidor');
       }
@@ -189,7 +199,7 @@ function App() {
         userVisibleOnly: true,
         applicationServerKey: toBase64Uint8(publicKey),
       });
-      const subscribeResponse = await fetch('/api/notifications/subscribe', {
+      const subscribeResponse = await fetch(apiUrl('/notifications/subscribe'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(subscription),

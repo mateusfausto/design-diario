@@ -6,14 +6,47 @@ const rssService = new RSSService();
 let userFeeds = [...defaultFeeds];
 let favorites = new Map();
 let readArticles = new Set();
+let cachedArticles = [];
+let cachedErrors = null;
+let cachedAt = 0;
+let cachedTotalFeeds = 0;
+let refreshPromise = null;
+const cacheTtlMs = 5 * 60 * 1000;
 
 const getActiveFeeds = () => userFeeds.filter(feed => feed.isActive);
 
+const buildArticlesWithStatus = (articles) => {
+  return articles.map(article => ({
+    ...article,
+    isFavorite: favorites.has(article.id),
+    isRead: readArticles.has(article.id),
+  }));
+};
+
+const isCacheFresh = () => cachedArticles.length > 0 && (Date.now() - cachedAt) < cacheTtlMs;
+
+const storeCache = (result, totalFeeds) => {
+  cachedArticles = result.articles;
+  cachedErrors = result.errors;
+  cachedAt = Date.now();
+  cachedTotalFeeds = totalFeeds;
+};
+
 const refreshFeeds = async () => {
-  const activeFeeds = getActiveFeeds();
-  rssService.clearCache();
-  const result = await rssService.fetchMultipleFeeds(activeFeeds);
-  return { result, totalFeeds: activeFeeds.length };
+  if (refreshPromise) {
+    return refreshPromise;
+  }
+  refreshPromise = (async () => {
+    const activeFeeds = getActiveFeeds();
+    const result = await rssService.fetchMultipleFeeds(activeFeeds);
+    storeCache(result, activeFeeds.length);
+    return { result, totalFeeds: activeFeeds.length };
+  })();
+  try {
+    return await refreshPromise;
+  } finally {
+    refreshPromise = null;
+  }
 };
 
 export const feedController = {
@@ -30,19 +63,32 @@ export const feedController = {
 
   getAllArticles: async (req, res) => {
     try {
-      const activeFeeds = getActiveFeeds();
-      const result = await rssService.fetchMultipleFeeds(activeFeeds);
-      
-      const articlesWithStatus = result.articles.map(article => ({
-        ...article,
-        isFavorite: favorites.has(article.id),
-        isRead: readArticles.has(article.id),
-      }));
+      if (isCacheFresh()) {
+        const articlesWithStatus = buildArticlesWithStatus(cachedArticles);
+        return res.json({
+          articles: articlesWithStatus,
+          errors: cachedErrors,
+          totalFeeds: cachedTotalFeeds || getActiveFeeds().length,
+        });
+      }
+
+      if (cachedArticles.length > 0) {
+        refreshFeeds().catch(() => {});
+        const articlesWithStatus = buildArticlesWithStatus(cachedArticles);
+        return res.json({
+          articles: articlesWithStatus,
+          errors: cachedErrors,
+          totalFeeds: cachedTotalFeeds || getActiveFeeds().length,
+        });
+      }
+
+      const { result, totalFeeds } = await refreshFeeds();
+      const articlesWithStatus = buildArticlesWithStatus(result.articles);
 
       res.json({
         articles: articlesWithStatus,
         errors: result.errors,
-        totalFeeds: activeFeeds.length,
+        totalFeeds,
       });
     } catch (error) {
       res.status(500).json({ error: error.message });
@@ -61,6 +107,10 @@ export const feedController = {
       }
 
       feed.isActive = isActive;
+      cachedArticles = [];
+      cachedErrors = null;
+      cachedAt = 0;
+      cachedTotalFeeds = 0;
       res.json(feed);
     } catch (error) {
       res.status(500).json({ error: error.message });
@@ -76,7 +126,7 @@ export const feedController = {
     try {
       const { result, totalFeeds } = await refreshFeeds();
       res.json({
-        refreshedAt: new Date().toISOString(),
+        refreshedAt: new Date(cachedAt || Date.now()).toISOString(),
         totalFeeds,
         errors: result.errors,
       });

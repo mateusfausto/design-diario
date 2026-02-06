@@ -168,10 +168,8 @@ export function FilterSection({
               <Button
                 variant="outline-secondary"
                 onClick={handleMobileToggle}
-                onMouseDown={(event) => event.preventDefault()}
-                onTouchStart={(event) => event.preventDefault()}
-                onMouseUp={handleMobileToggleBlur}
-                onTouchEnd={handleMobileToggleBlur}
+                onPointerDown={(event) => event.preventDefault()}
+                onPointerUp={handleMobileToggleBlur}
                 className="w-100 d-flex align-items-center justify-content-between mobile-filters-toggle"
                 ref={mobileToggleRef}
               >

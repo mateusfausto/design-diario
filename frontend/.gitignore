@@ -25,3 +25,4 @@ dist-ssr
 
 # variables.env
 .env
+.env.local

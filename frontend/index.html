@@ -5,8 +5,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Design diário - Agregador de Design</title>
     <meta name="description" content="Agregador de feeds RSS focado em UX, UI, Design Systems e mais" />
+    <meta name="theme-color" content="#6366f1" />
+    <link rel="manifest" href="/manifest.json" />
+    <link rel="icon" href="/favicon-dd.svg" />
   </head>
   <body>
+    <script>
+      try {
+        const theme = localStorage.getItem('app_theme') || 'light';
+        document.body.classList.toggle('theme-dark', theme === 'dark');
+        document.body.classList.toggle('theme-light', theme === 'light');
+      } catch {
+      }
+    </script>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>

@@ -41,7 +41,8 @@ function App() {
   const [showNotificationBanner, setShowNotificationBanner] = useState(true);
   const [isSubscribing, setIsSubscribing] = useState(false);
   const [subscriptionError, setSubscriptionError] = useState('');
-  const [hasPushSubscription, setHasPushSubscription] = useState(false);
+  const [serverSubscriptionOk, setServerSubscriptionOk] = useState(false);
+  const [isCheckingSubscription, setIsCheckingSubscription] = useState(true);
 
   useEffect(() => {
     document.body.classList.toggle('theme-dark', theme === 'dark');
@@ -118,26 +119,36 @@ function App() {
 
   useEffect(() => {
     const resendSubscription = async () => {
+      setIsCheckingSubscription(true);
       if (!('serviceWorker' in navigator) || notificationPermission !== 'granted') {
+        setServerSubscriptionOk(false);
         return;
       }
       const registration = await navigator.serviceWorker.ready;
       const existingSubscription = await registration.pushManager.getSubscription();
       if (existingSubscription) {
-        await fetch(apiUrl('/notifications/subscribe'), {
+        const response = await fetch(apiUrl('/notifications/subscribe'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(existingSubscription),
         });
-        setHasPushSubscription(true);
+        if (response.ok) {
+          setServerSubscriptionOk(true);
+          setSubscriptionError('');
+        } else {
+          setServerSubscriptionOk(false);
+          setSubscriptionError('Falha ao registrar notificação');
+        }
         return;
       }
       const response = await fetch(apiUrl('/notifications/public-key'));
       if (!response.ok) {
+        setServerSubscriptionOk(false);
         return;
       }
       const { publicKey } = await response.json();
       if (!publicKey) {
+        setServerSubscriptionOk(false);
         return;
       }
       const subscription = await registration.pushManager.subscribe({
@@ -150,22 +161,21 @@ function App() {
         body: JSON.stringify(subscription),
       });
       if (subscribeResponse.ok) {
-        setHasPushSubscription(true);
+        setServerSubscriptionOk(true);
+        setSubscriptionError('');
+      } else {
+        setServerSubscriptionOk(false);
+        setSubscriptionError('Falha ao registrar notificação');
       }
     };
-    resendSubscription().catch(() => {});
-  }, [notificationPermission]);
-
-  useEffect(() => {
-    const checkSubscription = async () => {
-      if (!('serviceWorker' in navigator)) {
-        return;
-      }
-      const registration = await navigator.serviceWorker.ready;
-      const existingSubscription = await registration.pushManager.getSubscription();
-      setHasPushSubscription(!!existingSubscription);
-    };
-    checkSubscription().catch(() => {});
+    resendSubscription()
+      .catch((error) => {
+        setServerSubscriptionOk(false);
+        setSubscriptionError(error?.message || 'Falha ao registrar notificação');
+      })
+      .finally(() => {
+        setIsCheckingSubscription(false);
+      });
   }, [notificationPermission]);
 
   const handleEnableNotifications = useCallback(async () => {
@@ -207,10 +217,11 @@ function App() {
       if (!subscribeResponse.ok) {
         throw new Error('Falha ao registrar notificação');
       }
-      setHasPushSubscription(true);
+      setServerSubscriptionOk(true);
       setShowNotificationBanner(false);
     } catch (error) {
       setSubscriptionError(error?.message || 'Falha ao ativar notificações');
+      setServerSubscriptionOk(false);
     } finally {
       setIsSubscribing(false);
     }
@@ -220,11 +231,14 @@ function App() {
     if (!showNotificationBanner) {
       return false;
     }
+    if (isCheckingSubscription) {
+      return false;
+    }
     if (notificationPermission === 'granted') {
-      return !hasPushSubscription;
+      return !serverSubscriptionOk;
     }
     return true;
-  }, [notificationPermission, showNotificationBanner, hasPushSubscription]);
+  }, [notificationPermission, showNotificationBanner, serverSubscriptionOk, isCheckingSubscription]);
 
   const notificationSubtitle =
     notificationPermission === 'denied'

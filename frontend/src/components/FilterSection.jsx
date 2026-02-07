@@ -198,7 +198,7 @@ export function FilterSection({
                   <Dropdown.Toggle as={SelectToggle}>
                     {label}
                   </Dropdown.Toggle>
-                  <Dropdown.Menu className="w-100 p-2">
+                  <Dropdown.Menu className="w-100 p-2 sources-dropdown-menu">
                     <div className="d-flex flex-column gap-2">
                       <Button
                         variant="link"

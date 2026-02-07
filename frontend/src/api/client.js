@@ -74,4 +74,48 @@ export const favoritesStorage = {
   setFavorites: setStoredFavorites,
 };
 
+const ARTICLES_CACHE_KEY = 'design-diario:articles-cache';
+const ARTICLES_CACHE_TTL_MS = 30 * 60 * 1000;
+const getArticlesCache = () => {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+  try {
+    const raw = localStorage.getItem(ARTICLES_CACHE_KEY);
+    if (!raw) {
+      return null;
+    }
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object') {
+      return null;
+    }
+    const ts = parsed.cachedAt || 0;
+    if (Date.now() - ts > ARTICLES_CACHE_TTL_MS) {
+      return null;
+    }
+    if (!parsed.payload) {
+      return null;
+    }
+    return { payload: parsed.payload, cachedAt: ts };
+  } catch {
+    return null;
+  }
+};
+const setArticlesCache = (payload) => {
+  if (typeof window === 'undefined') {
+    return;
+  }
+  try {
+    const value = JSON.stringify({ cachedAt: Date.now(), payload });
+    localStorage.setItem(ARTICLES_CACHE_KEY, value);
+  } catch {
+    return;
+  }
+};
+
+export const articlesCache = {
+  get: getArticlesCache,
+  set: setArticlesCache,
+};
+
 export default api;

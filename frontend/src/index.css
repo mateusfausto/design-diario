@@ -391,5 +391,9 @@ body.theme-light .dropdown-menu .form-check-input {
     border: none;
     box-shadow: none;
   }
+  .sources-dropdown-menu {
+    max-height: 40vh;
+    overflow-y: auto;
+  }
 
 }

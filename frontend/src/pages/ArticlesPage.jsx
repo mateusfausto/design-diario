@@ -6,7 +6,7 @@ import { ptBR } from 'date-fns/locale';
 import { ArticleCard } from '../components/ArticleCard';
 import { Footer } from '../components/Footer';
 import { FilterSection } from '../components/FilterSection';
-import { articlesApi, userApi, favoritesStorage } from '../api/client';
+import { articlesApi, userApi, favoritesStorage, articlesCache } from '../api/client';
 import { useState, useMemo, useRef } from 'react';
 import { useStore } from '../store/useStore';
 
@@ -19,12 +19,25 @@ export function ArticlesPage() {
   const theme = useStore((state) => state.theme);
   const toggleTheme = useStore((state) => state.toggleTheme);
 
+  const cached = articlesCache.get();
+  const initialData = cached ? cached.payload : undefined;
   const { data, isLoading, isFetching, error, refetch, dataUpdatedAt } = useQuery({
     queryKey: ['articles'],
     queryFn: articlesApi.getAllArticles,
+    initialData,
+    initialDataUpdatedAt: cached?.cachedAt,
     staleTime: 5 * 60 * 1000,
     refetchInterval: 10 * 60 * 1000,
     refetchIntervalInBackground: true,
+    onSuccess: (payload) => {
+      articlesCache.set(payload);
+    },
+    onError: () => {
+      const fallback = articlesCache.get();
+      if (fallback?.payload) {
+        queryClient.setQueryData(['articles'], fallback.payload);
+      }
+    },
   });
 
   const refreshMutation = useMutation({

@@ -55,6 +55,42 @@ const persistSubscriptions = async () => {
   return storageWriteQueue;
 };
 
+const sendPayloadToSubscribers = async (payload) => {
+  if (!ensureVapidReady()) {
+    return { sent: 0, failed: 0, unavailable: true };
+  }
+  await ensureStorageReady();
+  const currentSubscriptions = [...subscriptions.values()];
+  const results = await Promise.allSettled(
+    currentSubscriptions.map((subscription) => webpush.sendNotification(subscription, payload))
+  );
+  let sent = 0;
+  let failed = 0;
+  results.forEach((result, index) => {
+    if (result.status === 'fulfilled') {
+      sent += 1;
+      return;
+    }
+    failed += 1;
+    const subscription = currentSubscriptions[index];
+    const statusCode = result.reason?.statusCode;
+    if (statusCode === 404 || statusCode === 410) {
+      subscriptions.delete(subscription?.endpoint);
+    }
+  });
+  await persistSubscriptions();
+  return { sent, failed };
+};
+
+export const notifySubscribers = async ({ title, body, url }) => {
+  const payload = JSON.stringify({
+    title,
+    body,
+    url,
+  });
+  return sendPayloadToSubscribers(payload);
+};
+
 export const notificationsController = {
   getPublicKey: async (req, res) => {
     if (!ensureVapidReady()) {
@@ -88,33 +124,15 @@ export const notificationsController = {
   },
 
   sendTest: async (req, res) => {
-    if (!ensureVapidReady()) {
-      return res.status(503).json({ error: 'VAPID keys not configured' });
-    }
-    await ensureStorageReady();
     const payload = JSON.stringify({
       title: 'Design Diário',
       body: 'Novos artigos disponíveis',
       url: '/',
     });
-    const results = await Promise.allSettled(
-      [...subscriptions.values()].map((subscription) => webpush.sendNotification(subscription, payload))
-    );
-    let sent = 0;
-    let failed = 0;
-    results.forEach((result, index) => {
-      if (result.status === 'fulfilled') {
-        sent += 1;
-        return;
-      }
-      failed += 1;
-      const subscription = [...subscriptions.values()][index];
-      const statusCode = result.reason?.statusCode;
-      if (statusCode === 404 || statusCode === 410) {
-        subscriptions.delete(subscription?.endpoint);
-      }
-    });
-    await persistSubscriptions();
-    return res.json({ sent, failed });
+    const result = await sendPayloadToSubscribers(payload);
+    if (result.unavailable) {
+      return res.status(503).json({ error: 'VAPID keys not configured' });
+    }
+    return res.json(result);
   },
 };

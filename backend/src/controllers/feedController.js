@@ -1,5 +1,6 @@
 import { RSSService } from '../services/rssService.js';
 import { defaultFeeds, getFeedsByCategory, getCategories } from '../config/feedSources.js';
+import { notifySubscribers } from './notificationsController.js';
 
 const rssService = new RSSService();
 
@@ -38,8 +39,23 @@ const refreshFeeds = async () => {
   }
   refreshPromise = (async () => {
     const activeFeeds = getActiveFeeds();
+    const previousArticles = cachedArticles;
     const result = await rssService.fetchMultipleFeeds(activeFeeds);
     storeCache(result, activeFeeds.length);
+    if (previousArticles.length > 0 && result.articles.length > 0) {
+      const previousIds = new Set(previousArticles.map((article) => article.id));
+      const newCount = result.articles.reduce(
+        (count, article) => (previousIds.has(article.id) ? count : count + 1),
+        0
+      );
+      if (newCount > 0) {
+        notifySubscribers({
+          title: 'Design Diário',
+          body: `${newCount} novos artigos disponíveis`,
+          url: '/',
+        }).catch(() => {});
+      }
+    }
     return { result, totalFeeds: activeFeeds.length };
   })();
   try {

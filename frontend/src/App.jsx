@@ -30,7 +30,6 @@ const apiUrl = (path) => {
   }
   return `${normalizedBase}${normalizedPath}`;
 };
-
 function App() {
   const selectedView = useStore((state) => state.selectedView);
   const theme = useStore((state) => state.theme);
@@ -41,7 +40,6 @@ function App() {
   const [showNotificationBanner, setShowNotificationBanner] = useState(true);
   const [isSubscribing, setIsSubscribing] = useState(false);
   const [subscriptionError, setSubscriptionError] = useState('');
-  const [serverSubscriptionOk, setServerSubscriptionOk] = useState(false);
   const [isCheckingSubscription, setIsCheckingSubscription] = useState(true);
 
   useEffect(() => {
@@ -118,64 +116,26 @@ function App() {
   }, []);
 
   useEffect(() => {
-    const resendSubscription = async () => {
+    const checkSubscription = async () => {
       setIsCheckingSubscription(true);
-      if (!('serviceWorker' in navigator) || notificationPermission !== 'granted') {
-        setServerSubscriptionOk(false);
+      if (!('serviceWorker' in navigator)) {
+        setIsCheckingSubscription(false);
+        return;
+      }
+      if (notificationPermission !== 'granted') {
+        setIsCheckingSubscription(false);
         return;
       }
       const registration = await navigator.serviceWorker.ready;
       const existingSubscription = await registration.pushManager.getSubscription();
-      if (existingSubscription) {
-        const response = await fetch(apiUrl('/notifications/subscribe'), {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(existingSubscription),
-        });
-        if (response.ok) {
-          setServerSubscriptionOk(true);
-          setSubscriptionError('');
-        } else {
-          setServerSubscriptionOk(false);
-          setSubscriptionError('Falha ao registrar notificação');
-        }
+      if (!existingSubscription) {
+        setIsCheckingSubscription(false);
         return;
-      }
-      const response = await fetch(apiUrl('/notifications/public-key'));
-      if (!response.ok) {
-        setServerSubscriptionOk(false);
-        return;
-      }
-      const { publicKey } = await response.json();
-      if (!publicKey) {
-        setServerSubscriptionOk(false);
-        return;
-      }
-      const subscription = await registration.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: toBase64Uint8(publicKey),
-      });
-      const subscribeResponse = await fetch(apiUrl('/notifications/subscribe'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(subscription),
-      });
-      if (subscribeResponse.ok) {
-        setServerSubscriptionOk(true);
-        setSubscriptionError('');
-      } else {
-        setServerSubscriptionOk(false);
-        setSubscriptionError('Falha ao registrar notificação');
       }
     };
-    resendSubscription()
-      .catch((error) => {
-        setServerSubscriptionOk(false);
-        setSubscriptionError(error?.message || 'Falha ao registrar notificação');
-      })
-      .finally(() => {
-        setIsCheckingSubscription(false);
-      });
+    checkSubscription()
+      .catch(() => {})
+      .finally(() => setIsCheckingSubscription(false));
   }, [notificationPermission]);
 
   const handleEnableNotifications = useCallback(async () => {
@@ -196,19 +156,22 @@ function App() {
       if (permission !== 'granted') {
         return;
       }
-      const response = await fetch(apiUrl('/notifications/public-key'));
-      if (!response.ok) {
-        throw new Error('Notificações indisponíveis no servidor');
-      }
-      const { publicKey } = await response.json();
-      if (!publicKey) {
-        throw new Error('Chave pública inválida');
-      }
       const registration = await navigator.serviceWorker.ready;
-      const subscription = await registration.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: toBase64Uint8(publicKey),
-      });
+      let subscription = await registration.pushManager.getSubscription();
+      if (!subscription) {
+        const response = await fetch(apiUrl('/notifications/public-key'));
+        if (!response.ok) {
+          throw new Error('Notificações indisponíveis no servidor');
+        }
+        const { publicKey } = await response.json();
+        if (!publicKey) {
+          throw new Error('Chave pública inválida');
+        }
+        subscription = await registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: toBase64Uint8(publicKey),
+        });
+      }
       const subscribeResponse = await fetch(apiUrl('/notifications/subscribe'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -217,11 +180,9 @@ function App() {
       if (!subscribeResponse.ok) {
         throw new Error('Falha ao registrar notificação');
       }
-      setServerSubscriptionOk(true);
       setShowNotificationBanner(false);
     } catch (error) {
       setSubscriptionError(error?.message || 'Falha ao ativar notificações');
-      setServerSubscriptionOk(false);
     } finally {
       setIsSubscribing(false);
     }
@@ -234,11 +195,8 @@ function App() {
     if (isCheckingSubscription) {
       return false;
     }
-    if (notificationPermission === 'granted') {
-      return !serverSubscriptionOk;
-    }
     return true;
-  }, [notificationPermission, showNotificationBanner, serverSubscriptionOk, isCheckingSubscription]);
+  }, [showNotificationBanner, isCheckingSubscription]);
 
   const notificationSubtitle =
     notificationPermission === 'denied'
